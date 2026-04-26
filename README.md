@@ -10,7 +10,7 @@
 
 ---
 
-## 🎯 Descripción del proyecto
+##  Descripción del proyecto
 
 **707 Predator Hunter + Decoder** es una plataforma de inteligencia que automatiza la investigación de cuentas de TikTok e Instagram sospechosas de reclutar menores para el crimen organizado mexicano.
 
@@ -20,7 +20,7 @@ El sistema combina scraping de redes sociales, inteligencia artificial generativ
 
 ---
 
-## 🔥 Problema que resuelve
+##  Problema que resuelve
 
 México atraviesa una crisis de reclutamiento digital de menores sin precedentes:
 
@@ -37,7 +37,7 @@ Las autoridades mexicanas no tienen herramientas para procesar este volumen de i
 
 ---
 
-## 🏗️ Tecnologías y herramientas utilizadas
+##  Tecnologías y herramientas utilizadas
 
 ### Frontend
 - **React 18** + **Vite** (build tool)
@@ -66,7 +66,7 @@ Las autoridades mexicanas no tienen herramientas para procesar este volumen de i
 
 ---
 
-## 🤖 Documentación explícita del uso de IA
+##  Documentación explícita del uso de IA
 
 En cumplimiento con los lineamientos del hackathon, se documenta a continuación el uso transparente de inteligencia artificial en este proyecto:
 
@@ -194,7 +194,7 @@ El dashboard se abre en `http://localhost:5173`.
 
 ---
 
-## 📊 Arquitectura del sistema
+##  Arquitectura del sistema
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -269,15 +269,14 @@ HCKMX26-1776729498/
 
 ---
 
-## 👥 Integrantes del equipo
+##  Integrantes del equipo
 
 | Nombre | Rol |
 |--------|-----|
 | **Kevin Gutiérrez Soto** | Tech Lead · Arquitectura · Backend |
-| **Alfonso Robles Villalobos** | CEO · Producto · Estrategia |
-| **Dasein Paola Valencia Domínguez** | UX/UI · Frontend · Diseño |
-| **Edgar Emmanuel García Ortiz** | Backend · Integración IA |
-| **Diego Gómez Silva** | Frontend · Visualización de datos |
+| **Dasein Paola Valencia Domínguez** | Asistencia legal e internacional |
+| **Edgar Emmanuel García Ortiz** | Asistencia legal e internacional |
+| **Diego Gómez Silva** | Arquitectura · Visualización de datos |
 
 ---
 
@@ -289,12 +288,13 @@ El código se libera bajo licencia **MIT** para fomentar su adopción por organi
 
 ---
 
-## 🙏 Agradecimientos
+##  Agradecimientos
 
 - **Embajada de los Estados Unidos en México** — por impulsar la innovación en seguridad ciudadana
 - **StartupLab MX** — por organizar el Hackathon404
 - **REDIM (Red por los Derechos de la Infancia en México)** — por la información sobre reclutamiento de menores
 - **Comisión Nacional de Búsqueda (CNB)** — por la transparencia de datos sobre desapariciones
+- **IneVolution** por la infrestructura de NUBE 
 
 ---
 
