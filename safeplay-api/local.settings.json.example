@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AZURE_OPENAI_KEY": "TU_AZURE_OPENAI_KEY_AQUI",
+    "AZURE_OPENAI_ENDPOINT": "https://TU-RECURSO.openai.azure.com/",
+    "AZURE_OPENAI_DEPLOYMENT": "safeplay-openai-dev",
+    "COSMOS_ENDPOINT": "https://TU-COSMOS.documents.azure.com:443/",
+    "COSMOS_KEY": "TU_COSMOS_KEY_AQUI",
+    "APIFY_TOKEN": "apify_api_TU_TOKEN_AQUI",
+    "APIFY_TIKTOK_ACTOR": "clockworks/tiktok-hashtag-scraper",
+    "APIFY_COMMENTS_ACTOR": "clockworks/tiktok-comments-scraper",
+    "APIFY_INSTAGRAM_ACTOR": "apify/instagram-scraper",
+    "RESEND_API_KEY": "re_TU_API_KEY_AQUI",
+    "DEFAULT_AUTHORITIES_EMAIL": "707childsafetyplatform@gmail.com",
+    "COSMOS_NETWORK_CONTAINER": "network_nodes"
+  }
+}

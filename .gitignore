@@ -1,0 +1,57 @@
+# SECRETS - NUNCA COMMITEAR
+.env
+.env.*
+!.env.example
+local.settings.json
+*.pem
+*.key
+*.p12
+secrets/
+
+# Python (backend Azure Functions)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.egg-info/
+dist/
+build/
+
+# Azure Functions
+bin/
+obj/
+.azure/
+.python_packages/
+
+# Node / React (frontend)
+node_modules/
+dist/
+dist-ssr/
+*.local
+.next/
+.cache/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?

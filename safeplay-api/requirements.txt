@@ -1,0 +1,6 @@
+azure-functions
+openai>=1.50.0
+azure-cosmos>=4.5.0
+apify-client
+requests
+resend
