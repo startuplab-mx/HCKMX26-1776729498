@@ -1,48 +1,49 @@
 /**
- * NetworkIntelligenceTab.jsx (DARK MODE)
+ * NetworkIntelligenceTab.jsx (V4 - DARK MODE)
  * 707 PREDATOR HUNTER - Tab principal de inteligencia de red
+ *
+ * V4: Integra todo
+ * - Profile analysis completo
+ * - Cross-platform IG con Confidence Score
+ * - Grafo 3D + CartelDistribution + GeographicHeatmap
+ * - FullDossierModal (HTML + PDF + Email)
  */
 
 import React, { useState } from "react";
-import { Network, Instagram, AlertTriangle, Target } from "lucide-react";
+import { Network, Search, AlertTriangle, Target, User, FileText } from "lucide-react";
 import NetworkGraph from "./NetworkGraph";
-import ActivityHeatmap from "./ActivityHeatmap";
+import CartelDistribution from "./CartelDistribution";
+import GeographicHeatmap from "./GeographicHeatmap";
+import FullDossierModal from "./FullDossierModal";
 
 function NetworkIntelligenceTab(props) {
   const apiBaseUrl = props.apiBaseUrl;
   const functionKey = props.functionKey;
 
   const [username, setUsername] = useState("");
-  const [videoUrls, setVideoUrls] = useState("");
+  const [maxVideos, setMaxVideos] = useState(10);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [activeUsername, setActiveUsername] = useState(null);
   const [igMatch, setIgMatch] = useState(null);
   const [igLoading, setIgLoading] = useState(false);
   const [igError, setIgError] = useState(null);
+  const [dossierOpen, setDossierOpen] = useState(false);
 
-  function handleExpandNetwork() {
+  function handleAnalyzeProfile() {
     if (!username.trim()) {
       alert("Ingresa un username de TikTok (ej: @chapizza_sinaloa)");
-      return;
-    }
-    const urls = videoUrls.split("\n")
-      .map(function (u) { return u.trim(); })
-      .filter(function (u) { return u.length > 0; });
-
-    if (urls.length === 0) {
-      alert("Ingresa al menos una URL de video de TikTok");
       return;
     }
 
     setScanning(true);
     setScanResult(null);
 
-    const url = apiBaseUrl + "/expand_user_network" + (functionKey ? "?code=" + functionKey : "");
+    const url = apiBaseUrl + "/analyze-full-profile" + (functionKey ? "?code=" + functionKey : "");
     const body = {
-      root_username: username.replace("@", "").trim(),
-      video_urls: urls,
-      max_comments_per_video: 30
+      username: username.replace("@", "").trim(),
+      max_videos: maxVideos,
+      max_comments_per_video: 20
     };
 
     fetch(url, {
@@ -55,7 +56,7 @@ function NetworkIntelligenceTab(props) {
         setScanResult(data);
         setScanning(false);
         if (data.success) {
-          setActiveUsername(data.root_username);
+          setActiveUsername(data.username);
         }
       })
       .catch(function (err) {
@@ -66,17 +67,18 @@ function NetworkIntelligenceTab(props) {
 
   function handleCrossPlatform() {
     if (!activeUsername) {
-      alert("Primero expande la red de un usuario");
+      alert("Primero analiza un perfil");
       return;
     }
     setIgLoading(true);
     setIgMatch(null);
     setIgError(null);
 
-    const url = apiBaseUrl + "/cross_platform_search" + (functionKey ? "?code=" + functionKey : "");
+    const url = apiBaseUrl + "/cross-platform-search" + (functionKey ? "?code=" + functionKey : "");
+    const bio = (scanResult && scanResult.profile && scanResult.profile.bio) || "";
     const body = {
       tiktok_username: activeUsername,
-      tiktok_bio: "",
+      tiktok_bio: bio,
       tiktok_hashtags: []
     };
 
@@ -114,56 +116,75 @@ function NetworkIntelligenceTab(props) {
     return "border-l-slate-600";
   }
 
+  function getRiskColor(score) {
+    if (score >= 80) return "text-red-400";
+    if (score >= 60) return "text-orange-400";
+    if (score >= 40) return "text-yellow-400";
+    return "text-emerald-400";
+  }
+
+  function getRiskLabel(score) {
+    if (score >= 80) return "ALTO RIESGO";
+    if (score >= 60) return "RIESGO MEDIO";
+    if (score >= 40) return "RIESGO BAJO";
+    return "NORMAL";
+  }
+
   return (
     <div>
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-100 mb-2 flex items-center gap-2">
           <Network size={24} className="text-red-400" />
-          Network Intelligence
+          Network Intelligence · Profile Analysis
         </h2>
         <p className="text-slate-400">
-          Cazamos al reclutador. Decodificamos al que está levantando la mano.
+          Análisis completo de perfil: bio + últimos videos + comentarios. Mapeo automático de red.
         </p>
       </div>
 
       {/* Input panel */}
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">
-              Username sospechoso (TikTok)
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={function (e) { setUsername(e.target.value); }}
-              placeholder="@chapizza_sinaloa"
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:border-red-500 focus:outline-none text-sm"
-            />
-          </div>
           <div className="lg:col-span-2">
             <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">
-              URLs de videos (una por línea, máx 5)
+              Username TikTok a investigar
             </label>
-            <textarea
-              value={videoUrls}
-              onChange={function (e) { setVideoUrls(e.target.value); }}
-              placeholder="https://www.tiktok.com/@user/video/123456..."
-              rows={3}
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:border-red-500 focus:outline-none text-sm font-mono"
-            />
+            <div className="relative">
+              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={username}
+                onChange={function (e) { setUsername(e.target.value); }}
+                placeholder="@chapizza_sinaloa"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:border-red-500 focus:outline-none text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">
+              Videos a analizar
+            </label>
+            <select
+              value={maxVideos}
+              onChange={function (e) { setMaxVideos(parseInt(e.target.value)); }}
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 focus:border-red-500 focus:outline-none text-sm"
+            >
+              <option value={5}>Últimos 5 videos (rápido)</option>
+              <option value={10}>Últimos 10 videos (recomendado)</option>
+              <option value={15}>Últimos 15 videos (profundo)</option>
+            </select>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={handleExpandNetwork}
+            onClick={handleAnalyzeProfile}
             disabled={scanning}
             className={"flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition " + (scanning ? "bg-slate-700 text-slate-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-500 text-white")}
           >
             <Target size={16} />
-            {scanning ? "Cazando..." : "Expandir red de comentarios"}
+            {scanning ? "Analizando perfil completo..." : "Analizar perfil completo"}
           </button>
 
           <button
@@ -171,27 +192,111 @@ function NetworkIntelligenceTab(props) {
             disabled={!activeUsername || igLoading}
             className={"flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition " + ((!activeUsername || igLoading) ? "bg-slate-700 text-slate-400 cursor-not-allowed" : "bg-fuchsia-600 hover:bg-fuchsia-500 text-white")}
           >
-            <Instagram size={16} />
+            <Search size={16} />
             {igLoading ? "Buscando IG..." : "Cross-platform: Instagram"}
+          </button>
+
+          <button
+            onClick={function () { setDossierOpen(true); }}
+            disabled={!activeUsername}
+            className={"flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition " + (!activeUsername ? "bg-slate-700 text-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white")}
+          >
+            <FileText size={16} />
+            Generar dossier completo
           </button>
         </div>
 
-        {/* Resultado del scan */}
+        {scanning ? (
+          <div className="mt-4 p-3 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-300">
+            ⏳ Esto puede tardar 30-90 segundos. Estamos scrapeando perfil → videos → comentarios → analizando con IA...
+          </div>
+        ) : null}
+
         {scanResult ? (
-          <div className={"mt-4 p-3 rounded-lg text-sm " + (scanResult.error ? "bg-red-950/50 border border-red-800 text-red-300" : "bg-emerald-950/50 border border-emerald-800 text-emerald-300")}>
-            {scanResult.error ? (
-              <span>Error: {scanResult.error}</span>
+          <div className={"mt-4 p-4 rounded-lg text-sm " + (scanResult.error || !scanResult.success ? "bg-red-950/50 border border-red-800 text-red-300" : "bg-emerald-950/50 border border-emerald-800 text-emerald-200")}>
+            {scanResult.error || !scanResult.success ? (
+              <span>Error: {scanResult.error || "Análisis falló"}</span>
             ) : (
-              <span>
-                ✓ Cacería exitosa: <strong>{scanResult.videos_processed}</strong> videos,{" "}
-                <strong>{scanResult.comments_analyzed}</strong> comentarios analizados,{" "}
-                <strong className="text-red-300">{scanResult.suspicious_count}</strong> sospechosos detectados
-                ({Math.round(scanResult.suspicious_ratio * 100)}% del total)
-              </span>
+              <div>
+                <div className="font-semibold mb-2">✓ Análisis completo del perfil @{scanResult.username}</div>
+                {scanResult.stats ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+                    <div className="bg-slate-950 p-2 rounded">
+                      <div className="text-[10px] text-slate-500 uppercase">Videos</div>
+                      <div className="text-lg font-bold text-slate-100">{scanResult.stats.videos_processed}</div>
+                    </div>
+                    <div className="bg-slate-950 p-2 rounded">
+                      <div className="text-[10px] text-slate-500 uppercase">Comentarios</div>
+                      <div className="text-lg font-bold text-slate-100">{scanResult.stats.comments_analyzed}</div>
+                    </div>
+                    <div className="bg-slate-950 p-2 rounded">
+                      <div className="text-[10px] text-slate-500 uppercase">Vids sospechosos</div>
+                      <div className="text-lg font-bold text-red-400">{scanResult.stats.suspicious_videos}</div>
+                    </div>
+                    <div className="bg-slate-950 p-2 rounded">
+                      <div className="text-[10px] text-slate-500 uppercase">Coms sospechosos</div>
+                      <div className="text-lg font-bold text-red-400">{scanResult.stats.suspicious_comments}</div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
         ) : null}
       </div>
+
+      {/* Profile card */}
+      {scanResult && scanResult.success && scanResult.profile ? (
+        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
+          <div className="flex items-start gap-4">
+            {scanResult.profile.avatar_url ? (
+              <img
+                src={scanResult.profile.avatar_url}
+                alt={scanResult.profile.username}
+                className="w-16 h-16 rounded-full border-2 border-slate-700"
+                onError={function (e) { e.target.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
+                <User size={28} className="text-slate-500" />
+              </div>
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100">
+                  @{scanResult.profile.username}
+                </h3>
+                {scanResult.profile.is_verified ? (
+                  <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">✓ Verificado</span>
+                ) : null}
+              </div>
+              {scanResult.profile.nickname ? (
+                <div className="text-sm text-slate-400">{scanResult.profile.nickname}</div>
+              ) : null}
+              <div className="text-sm text-slate-400 mt-1">
+                <strong className="text-slate-200">{scanResult.profile.followers}</strong> followers ·{" "}
+                <strong className="text-slate-200">{scanResult.profile.heart_count}</strong> likes
+              </div>
+              {scanResult.profile.bio ? (
+                <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-300 italic">
+                  "{scanResult.profile.bio}"
+                </div>
+              ) : null}
+            </div>
+            {scanResult.bio_analysis && scanResult.bio_analysis.intent_score ? (
+              <div className="text-right shrink-0">
+                <div className="text-xs text-slate-500 uppercase">Bio Risk</div>
+                <div className={"text-3xl font-bold " + getRiskColor(scanResult.bio_analysis.intent_score)}>
+                  {scanResult.bio_analysis.intent_score}
+                </div>
+                <div className={"text-[10px] font-bold " + getRiskColor(scanResult.bio_analysis.intent_score)}>
+                  {getRiskLabel(scanResult.bio_analysis.intent_score)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {/* Cross-platform match panel */}
       {igMatch ? (
@@ -199,7 +304,7 @@ function NetworkIntelligenceTab(props) {
           <div className="flex justify-between items-start gap-4">
             <div className="flex-1">
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                <Instagram size={18} />
+                <Search size={18} />
                 Match cross-platform: Instagram
               </h3>
               {igMatch.instagram_profile ? (
@@ -265,7 +370,7 @@ function NetworkIntelligenceTab(props) {
         </div>
       ) : null}
 
-      {/* Grafo + Heatmap */}
+      {/* Grafo + Distribuciones */}
       {activeUsername ? (
         <div className="space-y-6">
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden" style={{ height: 600 }}>
@@ -276,21 +381,37 @@ function NetworkIntelligenceTab(props) {
             />
           </div>
 
-          <ActivityHeatmap
-            username={activeUsername}
-            apiBaseUrl={apiBaseUrl}
-            functionKey={functionKey}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CartelDistribution
+              username={activeUsername}
+              apiBaseUrl={apiBaseUrl}
+              functionKey={functionKey}
+            />
+            <GeographicHeatmap
+              username={activeUsername}
+              apiBaseUrl={apiBaseUrl}
+              functionKey={functionKey}
+            />
+          </div>
         </div>
       ) : (
         <div className="bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl p-16 text-center">
           <Target size={48} className="text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-300 mb-2">Sin red activa</h3>
+          <h3 className="text-lg font-semibold text-slate-300 mb-2">Sin perfil activo</h3>
           <p className="text-slate-500 text-sm">
-            Ingresa un username y URLs de videos arriba para empezar a cazar.
+            Ingresa un username de TikTok arriba para empezar el análisis completo.
           </p>
         </div>
       )}
+
+      {/* Modal del dossier */}
+      <FullDossierModal
+        username={activeUsername}
+        apiBaseUrl={apiBaseUrl}
+        functionKey={functionKey}
+        isOpen={dossierOpen}
+        onClose={function () { setDossierOpen(false); }}
+      />
     </div>
   );
 }

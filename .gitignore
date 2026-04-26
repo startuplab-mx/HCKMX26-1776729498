@@ -1,57 +1,53 @@
-# SECRETS - NUNCA COMMITEAR
+# Secretos y credenciales
 .env
-.env.*
-!.env.example
+.env.local
+.env.production
+.env.*.local
 local.settings.json
-*.pem
 *.key
-*.p12
-secrets/
+*.pem
+*.cert
 
-# Python (backend Azure Functions)
+# Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
+*.pyc
+*.pyo
 .venv/
-env/
-ENV/
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
+venv/
+.python_packages/
 *.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
 dist/
 build/
+.vite/
+
+# Backups y temporales
+*.backup
+*.backup_*
+*_backup.*
+*.broken
+*.broken_*
+*.dirty_*
+*.original
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
 
 # Azure Functions
 bin/
 obj/
 .azure/
 .python_packages/
-
-# Node / React (frontend)
-node_modules/
-dist/
-dist-ssr/
-*.local
-.next/
-.cache/
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Editor / OS
-.vscode/*
-!.vscode/extensions.json
-.idea/
-.DS_Store
-Thumbs.db
-*.suo
-*.sw?

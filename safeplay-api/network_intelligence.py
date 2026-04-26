@@ -504,3 +504,348 @@ def get_user_network(root_username: str) -> dict:
     except Exception as e:
         logging.error(f"Error recuperando red de {root_username}: {e}")
         return {"nodes": [], "edges": [], "count": 0, "error": str(e)}
+
+
+# ============================================================
+# SCRAPING DE PERFIL COMPLETO DE TIKTOK
+# (Agregado para Hackathon404 - Analisis de perfil)
+# ============================================================
+
+APIFY_PROFILE_ACTOR = os.environ.get("APIFY_PROFILE_ACTOR", "clockworks/tiktok-scraper")
+
+
+def scrape_tiktok_profile(username: str, max_videos: int = 10) -> dict:
+    """
+    Scrapea los ultimos N videos de un perfil de TikTok via Apify.
+    Devuelve dict con info del perfil y lista de videos.
+
+    Returns:
+    {
+        "profile": {
+            "username": "...",
+            "bio": "...",
+            "followers": N,
+            "following": N,
+            "video_count": N,
+            "is_verified": bool,
+            "avatar_url": "..."
+        },
+        "videos": [
+            {
+                "video_id": "...",
+                "video_url": "...",
+                "description": "...",
+                "hashtags": [...],
+                "create_time": "...",
+                "play_count": N,
+                "like_count": N,
+                "comment_count": N
+            }
+        ]
+    }
+    """
+    if not username:
+        return {"profile": None, "videos": []}
+
+    clean_handle = username.lstrip("@").strip()
+
+    try:
+        client = get_apify_client()
+        run_input = {
+            "profiles": [clean_handle],
+            "resultsPerPage": max_videos,
+            "shouldDownloadVideos": False,
+            "shouldDownloadCovers": False,
+            "shouldDownloadSubtitles": False
+        }
+
+        run = client.actor(APIFY_PROFILE_ACTOR).call(run_input=run_input, timeout_secs=180)
+
+        items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
+
+        if not items:
+            logging.warning(f"Sin resultados para perfil {clean_handle}")
+            return {"profile": None, "videos": []}
+
+        # El primer item suele tener metadata del autor
+        first = items[0]
+        author = first.get("authorMeta", {}) or {}
+
+        profile = {
+            "username": author.get("name", clean_handle),
+            "nickname": author.get("nickName", ""),
+            "bio": author.get("signature", ""),
+            "followers": author.get("fans", 0),
+            "following": author.get("following", 0),
+            "video_count": author.get("video", 0),
+            "heart_count": author.get("heart", 0),
+            "is_verified": author.get("verified", False),
+            "avatar_url": author.get("avatar", "")
+        }
+
+        videos = []
+        for item in items[:max_videos]:
+            # Extraer hashtags del texto
+            text = item.get("text", "") or ""
+            hashtags = []
+            for word in text.split():
+                if word.startswith("#"):
+                    hashtags.append(word.lstrip("#").lower())
+
+            video = {
+                "video_id": item.get("id", ""),
+                "video_url": item.get("webVideoUrl", "") or f"https://www.tiktok.com/@{clean_handle}/video/{item.get('id', '')}",
+                "description": text[:300],
+                "hashtags": hashtags,
+                "create_time": item.get("createTimeISO", ""),
+                "play_count": item.get("playCount", 0),
+                "like_count": item.get("diggCount", 0),
+                "comment_count": item.get("commentCount", 0),
+                "share_count": item.get("shareCount", 0)
+            }
+            if video["video_id"]:
+                videos.append(video)
+
+        logging.info(f"Profile scrape: {clean_handle} - {len(videos)} videos")
+        return {"profile": profile, "videos": videos}
+
+    except Exception as e:
+        logging.error(f"Error scraping profile {clean_handle}: {e}")
+        return {"profile": None, "videos": [], "error": str(e)}
+
+
+# ============================================================
+# DETECTOR GEOGRAFICO MEXICANO
+# Infiere estado mexicano del bio, hashtags y texto del comentario
+# ============================================================
+
+# Estados de Mexico con aliases comunes y abreviaciones
+MEXICAN_STATES = {
+    "AGUASCALIENTES": ["aguascalientes", "ags"],
+    "BAJA_CALIFORNIA": ["baja california", "tijuana", "mexicali", "bc", "bcn"],
+    "BAJA_CALIFORNIA_SUR": ["baja california sur", "los cabos", "la paz bcs", "bcs"],
+    "CAMPECHE": ["campeche", "camp"],
+    "CHIAPAS": ["chiapas", "tuxtla", "san cristobal", "chs"],
+    "CHIHUAHUA": ["chihuahua", "ciudad juarez", "cd juarez", "juarez", "chih"],
+    "CIUDAD_DE_MEXICO": ["cdmx", "ciudad de mexico", "df", "mexico df", "ciudad mexico"],
+    "COAHUILA": ["coahuila", "saltillo", "torreon", "monclova", "coah"],
+    "COLIMA": ["colima", "manzanillo", "col"],
+    "DURANGO": ["durango", "dgo"],
+    "ESTADO_DE_MEXICO": ["edomex", "estado de mexico", "ecatepec", "naucalpan", "toluca", "edo mex"],
+    "GUANAJUATO": ["guanajuato", "leon", "irapuato", "celaya", "gto"],
+    "GUERRERO": ["guerrero", "acapulco", "chilpancingo", "iguala", "gro"],
+    "HIDALGO": ["hidalgo", "pachuca", "hgo"],
+    "JALISCO": ["jalisco", "guadalajara", "gdl", "puerto vallarta", "vallarta", "tlaquepaque", "zapopan", "jal"],
+    "MICHOACAN": ["michoacan", "morelia", "uruapan", "lazaro cardenas", "apatzingan", "mich"],
+    "MORELOS": ["morelos", "cuernavaca", "mor"],
+    "NAYARIT": ["nayarit", "tepic", "nay"],
+    "NUEVO_LEON": ["nuevo leon", "monterrey", "mty", "san pedro", "garza garcia", "nl"],
+    "OAXACA": ["oaxaca", "huatulco", "puerto escondido", "oax"],
+    "PUEBLA": ["puebla", "tehuacan", "pue"],
+    "QUERETARO": ["queretaro", "qro"],
+    "QUINTANA_ROO": ["quintana roo", "cancun", "playa del carmen", "tulum", "qroo"],
+    "SAN_LUIS_POTOSI": ["san luis potosi", "slp"],
+    "SINALOA": ["sinaloa", "culiacan", "mazatlan", "los mochis", "guasave", "guamuchil", "sin"],
+    "SONORA": ["sonora", "hermosillo", "ciudad obregon", "nogales", "son"],
+    "TABASCO": ["tabasco", "villahermosa", "tab"],
+    "TAMAULIPAS": ["tamaulipas", "reynosa", "matamoros", "nuevo laredo", "tampico", "victoria", "tamps"],
+    "TLAXCALA": ["tlaxcala", "tlax"],
+    "VERACRUZ": ["veracruz", "xalapa", "coatzacoalcos", "poza rica", "boca del rio", "ver"],
+    "YUCATAN": ["yucatan", "merida", "yuc"],
+    "ZACATECAS": ["zacatecas", "fresnillo", "zac"]
+}
+
+# Hashtags y frases que IMPLICAN un cartel (mapeo a estado base del cartel)
+CARTEL_TO_STATE = {
+    "CARTEL_SINALOA": "SINALOA",
+    "CJNG": "JALISCO",
+    "LA_MANA": "TAMAULIPAS"
+}
+
+# Hashtags narco que apuntan a region (incluso sin mencion explicita)
+HASHTAG_REGION_HINTS = {
+    "chapizza": "SINALOA",
+    "puroplebe": "SINALOA",
+    "puroculiacan": "SINALOA",
+    "mencho": "JALISCO",
+    "4letras": "JALISCO",
+    "cjng": "JALISCO",
+    "wakala": "TAMAULIPAS",
+    "trabajoparalamana": "TAMAULIPAS",
+    "lafrontera": "TAMAULIPAS",
+    "matamoros": "TAMAULIPAS",
+    "reynosa": "TAMAULIPAS"
+}
+
+
+def detect_mexican_state(text: str, cartel_attribution: str = None, hashtags: list = None) -> str:
+    """
+    Detecta estado mexicano del texto.
+    Estrategia (en orden de prioridad):
+    1. Mencion explicita del estado o ciudad
+    2. Hashtag con hint regional
+    3. Atribucion de cartel (mapea al estado base)
+
+    Returns: nombre del estado en MAYUSCULAS o "DESCONOCIDO"
+    """
+    if not text:
+        text_lower = ""
+    else:
+        text_lower = text.lower()
+
+    # Estrategia 1: mencion explicita
+    for state, aliases in MEXICAN_STATES.items():
+        for alias in aliases:
+            # Buscar como palabra completa para evitar falsos positivos
+            if alias in text_lower:
+                # Validacion extra: si el alias es muy corto (como "bc"), exigir contexto
+                if len(alias) <= 3:
+                    if f" {alias} " in f" {text_lower} " or text_lower.startswith(alias + " ") or text_lower.endswith(" " + alias):
+                        return state
+                else:
+                    return state
+
+    # Estrategia 2: hashtags
+    if hashtags:
+        for ht in hashtags:
+            ht_clean = ht.lower().lstrip("#")
+            if ht_clean in HASHTAG_REGION_HINTS:
+                return HASHTAG_REGION_HINTS[ht_clean]
+
+    # Estrategia 3: cartel attribution
+    if cartel_attribution and cartel_attribution in CARTEL_TO_STATE:
+        return CARTEL_TO_STATE[cartel_attribution]
+
+    return "DESCONOCIDO"
+
+
+# ============================================================
+# AGREGACIONES PARA HEATMAPS
+# ============================================================
+
+def aggregate_by_cartel(root_username: str = None) -> dict:
+    """
+    Cuenta detecciones agrupadas por cartel.
+    Si root_username = None, agrega TODOS los nodos en la base.
+    Returns: {"CJNG": 47, "CARTEL_SINALOA": 31, ...}
+    """
+    try:
+        container = get_cosmos_container()
+
+        if root_username:
+            query = "SELECT * FROM c WHERE c.root_username = @username AND c.node_type = 'comment'"
+            params = [{"name": "@username", "value": root_username}]
+            items = list(container.query_items(
+                query=query, parameters=params,
+                partition_key=root_username
+            ))
+        else:
+            query = "SELECT * FROM c WHERE c.node_type = 'comment'"
+            items = list(container.query_items(
+                query=query,
+                enable_cross_partition_query=True
+            ))
+
+        cartel_counts = {
+            "CJNG": 0,
+            "CARTEL_SINALOA": 0,
+            "LA_MANA": 0,
+            "DESCONOCIDO": 0,
+            "OTROS": 0
+        }
+
+        for item in items:
+            cartel = item.get("cartel_attribution", "DESCONOCIDO")
+            score = item.get("intent_score", 0)
+
+            # Solo contamos si el score es relevante (>= 40)
+            if score < 40:
+                continue
+
+            if cartel in cartel_counts:
+                cartel_counts[cartel] += 1
+            elif cartel and cartel != "NA":
+                cartel_counts["OTROS"] += 1
+            else:
+                cartel_counts["DESCONOCIDO"] += 1
+
+        total = sum(cartel_counts.values())
+
+        return {
+            "counts": cartel_counts,
+            "total": total,
+            "scope": "global" if not root_username else f"@{root_username}"
+        }
+
+    except Exception as e:
+        logging.error(f"Error en aggregate_by_cartel: {e}")
+        return {"counts": {}, "total": 0, "error": str(e)}
+
+
+def aggregate_by_state(root_username: str = None) -> dict:
+    """
+    Cuenta detecciones agrupadas por estado mexicano.
+    Aplica el detector geografico a cada nodo.
+    Returns: {"SINALOA": 52, "JALISCO": 38, ...}
+    """
+    try:
+        container = get_cosmos_container()
+
+        if root_username:
+            query = "SELECT * FROM c WHERE c.root_username = @username"
+            params = [{"name": "@username", "value": root_username}]
+            items = list(container.query_items(
+                query=query, parameters=params,
+                partition_key=root_username
+            ))
+        else:
+            query = "SELECT * FROM c"
+            items = list(container.query_items(
+                query=query,
+                enable_cross_partition_query=True
+            ))
+
+        state_counts = {state: 0 for state in MEXICAN_STATES.keys()}
+        state_counts["DESCONOCIDO"] = 0
+        with_geo = 0
+        without_geo = 0
+
+        for item in items:
+            score = item.get("intent_score", 0)
+            if score < 40:
+                continue
+
+            # Texto a analizar
+            text = item.get("text", "") or item.get("metadata", {}).get("description", "")
+            cartel = item.get("cartel_attribution", "")
+
+            # Hashtags del video si los tiene
+            hashtags = []
+            metadata = item.get("metadata", {})
+            if isinstance(metadata, dict):
+                hashtags = metadata.get("hashtags", []) or []
+
+            state = detect_mexican_state(text, cartel, hashtags)
+
+            if state in state_counts:
+                state_counts[state] += 1
+                if state == "DESCONOCIDO":
+                    without_geo += 1
+                else:
+                    with_geo += 1
+
+        total = with_geo + without_geo
+        coverage_pct = round((with_geo / total) * 100, 1) if total > 0 else 0
+
+        return {
+            "counts": state_counts,
+            "total": total,
+            "with_geolocation": with_geo,
+            "without_geolocation": without_geo,
+            "coverage_percentage": coverage_pct,
+            "scope": "global" if not root_username else f"@{root_username}"
+        }
+
+    except Exception as e:
+        logging.error(f"Error en aggregate_by_state: {e}")
+        return {"counts": {}, "total": 0, "error": str(e)}

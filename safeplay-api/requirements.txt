@@ -4,3 +4,4 @@ azure-cosmos>=4.5.0
 apify-client
 requests
 resend
+weasyprint==62.3

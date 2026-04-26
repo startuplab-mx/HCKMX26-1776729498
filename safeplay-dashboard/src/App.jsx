@@ -7,13 +7,17 @@ import EventsTable from "./components/EventsTable";
 import EventDetailModal from "./components/EventDetailModal";
 import DashboardStatus from "./components/DashboardStatus";
 import HunterConsole from "./components/Hunter/HunterConsole";
+import NetworkIntelligenceTab from "./components/Hunter/NetworkIntelligenceTab";
 import { useEvents } from "./lib/useEvents";
-import { Shield, Target } from "lucide-react";
+import { Shield, Target, Network } from "lucide-react";
 
 function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [activeTab, setActiveTab] = useState("hunter"); // "guardian" | "hunter"
+  const [activeTab, setActiveTab] = useState("hunter");
   const { events, loading, error, lastRefresh, refresh } = useEvents(100);
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:7071/api";
+  const functionKey = import.meta.env.VITE_FUNCTION_KEY || "";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -33,10 +37,23 @@ function App() {
             >
               <Target size={16} />
               Intelligence
-              <span className="ml-1 px-1.5 py-0.5 bg-fuchsia-500/20 text-fuchsia-300 text-[10px] font-bold rounded">
+            </button>
+
+            <button
+              onClick={() => setActiveTab("network")}
+              className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold border-b-2 transition ${
+                activeTab === "network"
+                  ? "border-red-500 text-red-300"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Network size={16} />
+              Network Intel
+              <span className="ml-1 px-1.5 py-0.5 bg-red-500/20 text-red-300 text-[10px] font-bold rounded">
                 NEW
               </span>
             </button>
+
             <button
               onClick={() => setActiveTab("guardian")}
               className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold border-b-2 transition ${
@@ -55,6 +72,14 @@ function App() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* HUNTER TAB */}
         {activeTab === "hunter" && <HunterConsole />}
+
+        {/* NETWORK INTEL TAB */}
+        {activeTab === "network" && (
+          <NetworkIntelligenceTab
+            apiBaseUrl={apiBaseUrl}
+            functionKey={functionKey}
+          />
+        )}
 
         {/* GUARDIAN TAB */}
         {activeTab === "guardian" && (
@@ -102,7 +127,6 @@ function App() {
         )}
       </main>
 
-      {/* Modal de detalle de evento */}
       <EventDetailModal
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}

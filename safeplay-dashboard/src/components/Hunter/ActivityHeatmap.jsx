@@ -20,7 +20,7 @@ function ActivityHeatmap(props) {
     if (!username) return;
     setLoading(true);
     const cleanUsername = username.replace("@", "").trim();
-    const url = apiBaseUrl + "/get_activity_heatmap?username=" + cleanUsername + (functionKey ? "&code=" + functionKey : "");
+    const url = apiBaseUrl + "/get-activity-heatmap?username=" + cleanUsername + (functionKey ? "&code=" + functionKey : "");
 
     fetch(url)
       .then(function (res) { return res.json(); })

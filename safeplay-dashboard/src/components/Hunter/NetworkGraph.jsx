@@ -1,10 +1,12 @@
 /**
- * NetworkGraph.jsx (DARK MODE)
- * 707 PREDATOR HUNTER - Visualizacion del grafo de inteligencia
+ * NetworkGraph.jsx (3D VERSION)
+ * 707 PREDATOR HUNTER - Visualizacion del grafo de inteligencia EN 3D
+ *
+ * Usa react-force-graph-3d (Three.js)
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import ForceGraph2D from "react-force-graph-2d";
+import React, { useState, useEffect, useRef } from "react";
+import ForceGraph3D from "react-force-graph-3d";
 
 function NetworkGraph(props) {
   const username = props.username;
@@ -33,21 +35,21 @@ function NetworkGraph(props) {
   }
 
   function getNodeSize(node) {
-    if (node.type === "user") return 12;
-    if (node.type === "video") return 8;
-    if (node.type === "external_profile") return 10;
+    if (node.type === "user") return 8;
+    if (node.type === "video") return 5;
+    if (node.type === "external_profile") return 6;
     if (node.type === "comment") {
       const score = node.intent_score || 0;
-      return 4 + (score / 100) * 6;
+      return 2 + (score / 100) * 4;
     }
-    return 5;
+    return 3;
   }
 
   function loadGraph() {
     if (!username) return;
     setLoading(true);
     const cleanUsername = username.replace("@", "").trim();
-    const url = apiBaseUrl + "/get_user_network?username=" + cleanUsername + (functionKey ? "&code=" + functionKey : "");
+    const url = apiBaseUrl + "/get-user-network?username=" + cleanUsername + (functionKey ? "&code=" + functionKey : "");
 
     fetch(url)
       .then(function (res) { return res.json(); })
@@ -85,45 +87,23 @@ function NetworkGraph(props) {
   function handleNodeClick(node) {
     setSelectedNode(node);
     if (onNodeClick) onNodeClick(node);
-    if (fgRef.current) {
-      fgRef.current.centerAt(node.x, node.y, 800);
-      fgRef.current.zoom(3, 800);
+    // Centrar camara en el nodo
+    if (fgRef.current && node.x !== undefined) {
+      const distance = 80;
+      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+      fgRef.current.cameraPosition(
+        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+        node,
+        2000
+      );
     }
   }
-
-  const nodeCanvasObject = useCallback(function (node, ctx, globalScale) {
-    const size = getNodeSize(node);
-    const color = getNodeColor(node);
-
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    if (node.type === "external_profile") {
-      const conf = (node.data && node.data.confidence_score) || 0;
-      const strokeColor = conf >= 70 ? "#dc2626" : conf >= 40 ? "#eab308" : "#64748b";
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    if (globalScale > 1.5) {
-      const label = node.label || node.id;
-      const fontSize = 12 / globalScale;
-      ctx.font = fontSize + "px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#cbd5e1";
-      ctx.fillText(label.substring(0, 20), node.x, node.y + size + fontSize);
-    }
-  }, []);
 
   return (
     <div className="relative w-full h-full">
       {/* Stats overlay */}
       <div className="absolute top-3 left-3 bg-slate-950/90 border border-slate-800 px-4 py-3 rounded-lg z-10 text-xs backdrop-blur-md">
-        <div className="font-semibold text-red-400 mb-1">Network Intelligence</div>
+        <div className="font-semibold text-red-400 mb-1">Network Intelligence · 3D</div>
         <div className="text-slate-300">Nodos: <strong className="text-slate-100">{stats.total}</strong></div>
         <div className="text-slate-300">Sospechosos: <strong className="text-red-400">{stats.suspicious}</strong></div>
         <div className="text-slate-300">Cross-platform: <strong className="text-fuchsia-400">{stats.external}</strong></div>
@@ -139,10 +119,15 @@ function NetworkGraph(props) {
         <LegendItem color="#64748b" label="Comentario neutro" />
       </div>
 
+      {/* Controles ayuda */}
+      <div className="absolute bottom-3 right-3 bg-slate-950/90 border border-slate-800 px-3 py-2 rounded-lg z-10 text-[10px] text-slate-400 backdrop-blur-md">
+        🖱 Drag = rotar · Scroll = zoom · Click = enfocar
+      </div>
+
       {/* Loading */}
       {loading ? (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-950 border border-slate-800 px-6 py-4 rounded-lg z-20 text-sm text-slate-300">
-          Cargando grafo de inteligencia...
+          Cargando grafo 3D...
         </div>
       ) : null}
 
@@ -160,24 +145,28 @@ function NetworkGraph(props) {
         </div>
       ) : null}
 
-      {/* Grafo */}
-      <ForceGraph2D
+      {/* Grafo 3D */}
+      <ForceGraph3D
         ref={fgRef}
         graphData={graphData}
-        nodeCanvasObject={nodeCanvasObject}
-        nodePointerAreaPaint={function (node, color, ctx) {
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, getNodeSize(node) + 2, 0, 2 * Math.PI, false);
-          ctx.fill();
+        nodeLabel={function (node) {
+          return node.label || node.id;
         }}
-        linkColor={function () { return "#334155"; }}
-        linkWidth={1}
-        linkDirectionalArrowLength={4}
-        linkDirectionalArrowRelPos={0.9}
+        nodeColor={getNodeColor}
+        nodeVal={getNodeSize}
+        nodeOpacity={0.9}
+        nodeResolution={16}
+        linkColor={function () { return "rgba(148, 163, 184, 0.3)"; }}
+        linkWidth={0.5}
+        linkOpacity={0.5}
+        linkDirectionalParticles={2}
+        linkDirectionalParticleWidth={1.5}
+        linkDirectionalParticleSpeed={0.005}
         onNodeClick={handleNodeClick}
-        cooldownTicks={100}
         backgroundColor="#0f172a"
+        showNavInfo={false}
+        controlType="orbit"
+        cooldownTime={3000}
       />
     </div>
   );
@@ -250,16 +239,6 @@ function NodeDetail(props) {
             {data.confidence_score}/100 ({data.confidence_level})
           </span>
         </div>
-        {data.match_indicators && data.match_indicators.length > 0 ? (
-          <div className="mt-2">
-            <div className="text-slate-500 mb-1">Indicadores:</div>
-            <ul className="space-y-0.5 list-disc list-inside text-[11px]">
-              {data.match_indicators.map(function (ind, i) {
-                return <li key={i}>{ind}</li>;
-              })}
-            </ul>
-          </div>
-        ) : null}
       </div>
     );
   }

@@ -26,3 +26,8 @@ dist-ssr
 
 # Env de produccion (manejado en Azure SWA secrets)
 .env.production
+
+# Backups locales temporales
+*.backup
+*.backup_*
+*_backup.*

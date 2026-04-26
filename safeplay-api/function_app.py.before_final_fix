@@ -10,6 +10,11 @@ from openai import AzureOpenAI
 from azure.cosmos import CosmosClient
 from apify_client import ApifyClient
 from network_intelligence import (
+)
+from dossier_builder import build_full_dossier_html, generate_folio, get_risk_label
+    aggregate_by_cartel,
+    aggregate_by_state,
+    scrape_tiktok_profile,
     scrape_tiktok_comments,
     classify_comment_intent,
     search_instagram_profile,
@@ -20,11 +25,7 @@ from network_intelligence import (
     build_external_profile_node,
     save_node_to_cosmos,
     get_user_network,
-    scrape_tiktok_profile,
-    aggregate_by_cartel,
-    aggregate_by_state,
 )
-from dossier_builder import build_full_dossier_html, generate_folio, get_risk_label
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
