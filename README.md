@@ -288,6 +288,17 @@ El código se libera bajo licencia **MIT** para fomentar su adopción por organi
 
 ---
 
+## Materiales extra
+
+Recursos complementarios que apoyan la presentación y comprensión del proyecto:
+
+| Recurso | Descripción | Enlace |
+|---------|-------------|--------|
+| 🎨 **Pitch Deck** | Presentación ejecutiva del proyecto en Canva | [Ver pitch deck](https://www.canva.com/design/DAHH7OlOrDo/5-kE2ucKOahP_QYPCrnFNw/edit) |
+| 🎬 **Video demo** | Demostración funcional del sistema en operación | [Ver video](https://drive.google.com/file/d/113GuQ1dPIKbqAnhRuzE1AgI4w6cxR5MV/view?usp=sharing) |
+| 🌐 **Demo en vivo** | Plataforma desplegada en producción | [safeplay-dashboard.web.app](https://polite-mushroom-043b2ab1e.7.azurestaticapps.net) |
+
+---
 ##  Agradecimientos
 
 - **Embajada de los Estados Unidos en México** — por impulsar la innovación en seguridad ciudadana
